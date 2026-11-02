@@ -40,6 +40,13 @@ CampusBite is a full-stack food ordering and delivery app with three user roles:
 - Background task that scans for stale orders and writes reminder records
 - Dockerised backend with PostgreSQL, automated tests (`pytest`)
 
+**User interface**
+- Modern, framework-free design system in plain CSS (`frontend/src/index.css`): gradient hero sections, card layouts, status badges, animated order tracker, skeleton loaders and empty states
+- Animations: page transitions, staggered card entrance, hover/press feedback, sliding alerts; all disabled automatically for users who prefer reduced motion
+- Fully responsive from 320 px phones to large desktops: collapsible mobile navigation, tables that turn into cards, stacked cart/checkout, safe-area support for notched phones, 16 px inputs to avoid iOS zoom
+- Browser support: current Chrome, Edge, Firefox, Opera and Samsung Internet, plus Safari / iOS 14+ (explicit Vite build targets in `vite.config.js`)
+- Accessible: keyboard focus rings, ARIA labels/roles for menus, tabs, switches and live regions
+
 ### Order lifecycle
 
 ```

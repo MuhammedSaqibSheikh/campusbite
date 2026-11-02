@@ -4,6 +4,13 @@ import { errorMessage } from "../api/client";
 import Alert from "../components/Alert";
 import { useAuth } from "../context/AuthContext";
 import { roleHome } from "../utils";
+import { AuthAside } from "./Login";
+
+const ROLES = [
+  ["customer", "🍽️", "Customer"],
+  ["restaurant_owner", "🏪", "Restaurant owner"],
+  ["delivery_partner", "🛵", "Delivery partner"],
+];
 
 export default function Register() {
   const { register } = useAuth();
@@ -38,57 +45,80 @@ export default function Register() {
   };
 
   return (
-    <form className="card form narrow" onSubmit={submit}>
-      <h2>Create account</h2>
-      <Alert onClose={() => setError("")}>{error}</Alert>
-      <label>
-        I am a
-        <select value={form.role} onChange={set("role")}>
-          <option value="customer">Customer</option>
-          <option value="restaurant_owner">Restaurant owner</option>
-          <option value="delivery_partner">Delivery partner</option>
-        </select>
-      </label>
-      <label>
-        Full name
-        <input required minLength={2} value={form.name} onChange={set("name")} />
-      </label>
-      <label>
-        Email
-        <input type="email" required value={form.email} onChange={set("email")} />
-      </label>
-      <label>
-        Password (min 8 characters)
-        <input type="password" required minLength={8} maxLength={72} value={form.password} onChange={set("password")} />
-      </label>
-      <label>
-        Phone
-        <input value={form.phone} onChange={set("phone")} />
-      </label>
-      {form.role === "customer" && (
+    <div className="auth">
+      <AuthAside title="Join CampusBite" text="Create an account in seconds and start ordering, cooking or delivering." />
+      <form className="auth-form form" onSubmit={submit}>
+        <div>
+          <span className="eyebrow">Sign up</span>
+          <h1>Create your account</h1>
+          <p className="muted small">
+            Already registered? <Link to="/login">Log in</Link>
+          </p>
+        </div>
+        <Alert onClose={() => setError("")}>{error}</Alert>
+
+        <fieldset className="form">
+          <legend className="small" style={{ fontWeight: 600, color: "var(--text-2)", marginBottom: "0.35rem" }}>
+            I am a
+          </legend>
+          <div className="role-picker" role="radiogroup" aria-label="Account type">
+            {ROLES.map(([value, icon, text]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={form.role === value}
+                className={form.role === value ? "role-option active" : "role-option"}
+                onClick={() => setForm({ ...form, role: value })}
+              >
+                <span aria-hidden="true">{icon}</span>
+                {text}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="form-grid compact">
+          <label>
+            Full name
+            <input autoComplete="name" required minLength={2} value={form.name} onChange={set("name")} />
+          </label>
+          <label>
+            Phone
+            <input type="tel" autoComplete="tel" value={form.phone} onChange={set("phone")} />
+          </label>
+        </div>
         <label>
-          Default delivery address
-          <input value={form.address} onChange={set("address")} />
+          Email
+          <input type="email" autoComplete="email" required value={form.email} onChange={set("email")} />
         </label>
-      )}
-      {form.role === "restaurant_owner" && (
-        <>
+        <label>
+          Password
+          <input type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={form.password} onChange={set("password")} />
+          <span className="hint">At least 8 characters</span>
+        </label>
+        {form.role === "customer" && (
           <label>
-            Restaurant name
-            <input required minLength={2} value={form.restaurant_name} onChange={set("restaurant_name")} />
+            Default delivery address
+            <input autoComplete="street-address" value={form.address} onChange={set("address")} />
           </label>
-          <label>
-            Cuisine
-            <input value={form.cuisine} onChange={set("cuisine")} />
-          </label>
-        </>
-      )}
-      <button className="btn" disabled={busy}>
-        {busy ? "Creating..." : "Sign up"}
-      </button>
-      <p className="muted small">
-        Already registered? <Link to="/login">Log in</Link>
-      </p>
-    </form>
+        )}
+        {form.role === "restaurant_owner" && (
+          <div className="form-grid compact">
+            <label>
+              Restaurant name
+              <input required minLength={2} value={form.restaurant_name} onChange={set("restaurant_name")} />
+            </label>
+            <label>
+              Cuisine
+              <input value={form.cuisine} onChange={set("cuisine")} />
+            </label>
+          </div>
+        )}
+        <button className="btn btn-lg btn-block" disabled={busy}>
+          {busy ? "Creating..." : "Create account"}
+        </button>
+      </form>
+    </div>
   );
 }

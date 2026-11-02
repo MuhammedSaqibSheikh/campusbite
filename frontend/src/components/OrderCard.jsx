@@ -5,10 +5,10 @@ import StatusBadge from "./StatusBadge";
 export default function OrderCard({ order, showCustomer = false, children }) {
   return (
     <article className="card order">
-      <header className="row between wrap">
+      <header className="order-head">
         <div>
           <h3>
-            Order #{order.id} · {order.restaurant_name}
+            {order.restaurant_name} <span className="order-id">#{order.id}</span>
           </h3>
           <small className="muted">{formatDate(order.created_at)}</small>
         </div>
@@ -17,44 +17,40 @@ export default function OrderCard({ order, showCustomer = false, children }) {
 
       <ul className="lines">
         {order.items.map((i) => (
-          <li key={i.id} className="row between">
+          <li key={i.id}>
             <span>
-              {i.quantity} × {i.name}
+              <span className="qty">{i.quantity}×</span>
+              {i.name}
             </span>
             <span>{money(i.price * i.quantity)}</span>
           </li>
         ))}
       </ul>
 
-      <div className="row between wrap">
+      <div className="order-total">
         <strong>Total {money(order.total_amount)}</strong>
-        <span className="muted">
-          Payment: <b>{order.payment_status}</b>
-          {order.return_request && (
-            <>
-              {" "}
-              · Return: <b>{order.return_request.status}</b>
-            </>
-          )}
+        <span className="row wrap small">
+          <span className="tag">💳 {order.payment_status}</span>
+          {order.return_request && <span className="tag">↩ Return: {order.return_request.status}</span>}
         </span>
       </div>
 
-      <p className="muted small">
-        Deliver to: {order.delivery_address}
+      <div className="order-meta">
+        <span>
+          📍 <b>Deliver to:</b> {order.delivery_address}
+        </span>
         {showCustomer && (
-          <>
-            <br />
-            Customer: {order.customer_name}
+          <span>
+            👤 <b>Customer:</b> {order.customer_name}
             {order.customer_phone ? ` · ${order.customer_phone}` : ""}
-          </>
+          </span>
         )}
         {order.delivery_partner_name && (
-          <>
-            <br />
-            Delivery partner: {order.delivery_partner_name}
-          </>
+          <span>
+            🛵 <b>Delivery partner:</b> {order.delivery_partner_name}
+          </span>
         )}
-      </p>
+      </div>
 
       {children}
     </article>

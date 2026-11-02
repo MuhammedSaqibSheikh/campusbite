@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api, { errorMessage } from "../api/client";
 import Alert from "../components/Alert";
-import Spinner from "../components/Spinner";
+import PageHeader from "../components/PageHeader";
 
 const EXAMPLES = [
   "Summarize my last five orders.",
@@ -12,14 +12,16 @@ const EXAMPLES = [
 
 export default function AIInsights() {
   const [question, setQuestion] = useState("");
+  const [asked, setAsked] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const run = async (request) => {
+  const run = async (title, request) => {
     setLoading(true);
     setError("");
     setResult(null);
+    setAsked(title);
     try {
       setResult((await request()).data);
     } catch (err) {
@@ -31,55 +33,80 @@ export default function AIInsights() {
 
   const ask = (q) => {
     setQuestion(q);
-    run(() => api.post("/ai/ask", { question: q }));
+    run(q, () => api.post("/ai/ask", { question: q }));
   };
 
   return (
     <>
-      <h2>AI order insights</h2>
-      <p className="muted">Ask about your own order history. Only your orders are ever shared with the AI.</p>
+      <PageHeader
+        eyebrow="✨ Powered by AI"
+        title="AI order insights"
+        subtitle="Ask anything about your own order history. Only your orders are ever shared with the AI."
+      />
 
-      <div className="card">
-        <button className="btn" disabled={loading} onClick={() => run(() => api.post("/ai/summary"))}>
-          Summarize my recent orders
-        </button>
-        <hr />
+      <section className="card ai-panel">
+        <div className="card-title">
+          <h3>What would you like to know?</h3>
+          <button
+            className="btn btn-sm"
+            disabled={loading}
+            onClick={() => run("Summary of my recent orders", () => api.post("/ai/summary"))}
+          >
+            ✨ Summarize my recent orders
+          </button>
+        </div>
         <form
-          className="row wrap"
+          className="ai-input"
           onSubmit={(e) => {
             e.preventDefault();
             ask(question.trim());
           }}
         >
           <input
-            className="grow"
             minLength={3}
             maxLength={500}
             required
-            placeholder="Ask a question about your orders"
+            aria-label="Your question"
+            placeholder="e.g. How much did I spend this month?"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
           />
-          <button className="btn" disabled={loading}>
-            Ask
+          <button className="btn" disabled={loading} aria-label="Ask">
+            Ask →
           </button>
         </form>
-        <div className="row wrap chips">
+        <div className="chips">
           {EXAMPLES.map((q) => (
-            <button key={q} className="chip" disabled={loading} onClick={() => ask(q)}>
+            <button key={q} type="button" className="chip" disabled={loading} onClick={() => ask(q)}>
               {q}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {loading && <Spinner text="Thinking..." />}
       <Alert onClose={() => setError("")}>{error}</Alert>
-      {result && (
-        <div className="card">
-          <p className="pre">{result.answer}</p>
-          <small className="muted">Based on {result.orders_considered} order(s)</small>
-        </div>
+
+      {(loading || result) && (
+        <section className="card" aria-live="polite">
+          {asked && <p className="small muted" style={{ marginTop: 0 }}>You asked: “{asked}”</p>}
+          <div className="ai-answer">
+            <span className="ai-avatar" aria-hidden="true">✨</span>
+            <div className="ai-bubble">
+              {loading ? (
+                <span className="typing" role="status" aria-label="Thinking">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              ) : (
+                <>
+                  <p className="pre" style={{ margin: 0 }}>{result.answer}</p>
+                  <small className="muted">Based on {result.orders_considered} order(s)</small>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
       )}
     </>
   );

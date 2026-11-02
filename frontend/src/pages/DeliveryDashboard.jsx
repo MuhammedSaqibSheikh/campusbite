@@ -1,9 +1,12 @@
 import { useState } from "react";
 import api, { errorMessage } from "../api/client";
 import Alert from "../components/Alert";
+import EmptyState from "../components/EmptyState";
 import OrderCard from "../components/OrderCard";
+import OrderTracker from "../components/OrderTracker";
+import PageHeader from "../components/PageHeader";
 import Pagination from "../components/Pagination";
-import Spinner from "../components/Spinner";
+import { SkeletonList } from "../components/Skeleton";
 import useFetch from "../hooks/useFetch";
 
 export default function DeliveryDashboard() {
@@ -36,54 +39,72 @@ export default function DeliveryDashboard() {
 
   return (
     <>
-      <div className="row between wrap">
-        <h2>My deliveries</h2>
-        <button className="btn btn-light" onClick={orders.reload}>
-          Refresh
-        </button>
+      <PageHeader
+        eyebrow="Delivery partner"
+        title="My deliveries"
+        subtitle="Pick up, deliver and keep customers in the loop."
+        actions={
+          <button className="btn btn-light" onClick={orders.reload} disabled={orders.loading}>
+            ↻ Refresh
+          </button>
+        }
+      />
+
+      <div className="row wrap between">
+        <div className="segmented" role="tablist" aria-label="Deliveries">
+          <button type="button" role="tab" aria-selected={active} className={active ? "active" : ""} onClick={() => switchTab("active")}>
+            🛵 Assigned
+          </button>
+          <button type="button" role="tab" aria-selected={!active} className={!active ? "active" : ""} onClick={() => switchTab("history")}>
+            📜 History
+          </button>
+        </div>
+        {active && (
+          <select
+            style={{ marginBottom: "1rem" }}
+            value={status}
+            onChange={(e) => {
+              setPage(1);
+              setStatus(e.target.value);
+            }}
+            aria-label="Status"
+          >
+            <option value="">All active</option>
+            <option value="ASSIGNED">Assigned</option>
+            <option value="OUT_FOR_DELIVERY">Out for delivery</option>
+          </select>
+        )}
       </div>
-      <div className="tabs">
-        <button className={active ? "tab active" : "tab"} onClick={() => switchTab("active")}>
-          Assigned
-        </button>
-        <button className={!active ? "tab active" : "tab"} onClick={() => switchTab("history")}>
-          History
-        </button>
-      </div>
-      {active && (
-        <select
-          className="filters"
-          value={status}
-          onChange={(e) => {
-            setPage(1);
-            setStatus(e.target.value);
-          }}
-          aria-label="Status"
-        >
-          <option value="">All active</option>
-          <option value="ASSIGNED">Assigned</option>
-          <option value="OUT_FOR_DELIVERY">Out for delivery</option>
-        </select>
-      )}
 
       <Alert onClose={() => setError("")}>{error || orders.error}</Alert>
-      {orders.loading && <Spinner />}
-      {orders.data && !orders.loading && orders.data.items.length === 0 && <p className="center muted">Nothing here.</p>}
+      {orders.loading && !orders.data && <SkeletonList />}
+      {orders.data && orders.data.items.length === 0 && (
+        <EmptyState icon={active ? "🛵" : "📜"} title={active ? "No active deliveries" : "No deliveries yet"}>
+          {active ? "New assignments from restaurants will appear here." : "Completed deliveries will be listed here."}
+        </EmptyState>
+      )}
 
-      {orders.data?.items.map((o) => (
-        <OrderCard key={o.id} order={o} showCustomer>
-          {o.status === "ASSIGNED" && (
-            <button className="btn" onClick={() => update(o, "OUT_FOR_DELIVERY")}>
-              Mark out for delivery
-            </button>
-          )}
-          {o.status === "OUT_FOR_DELIVERY" && (
-            <button className="btn" onClick={() => update(o, "DELIVERED")}>
-              Mark delivered
-            </button>
-          )}
-        </OrderCard>
-      ))}
+      <div className="stagger" key={`${tab}-${status}-${page}`}>
+        {orders.data?.items.map((o) => (
+          <OrderCard key={o.id} order={o} showCustomer>
+            <OrderTracker status={o.status} />
+            {o.status === "ASSIGNED" && (
+              <div className="order-actions">
+                <button className="btn btn-lg" onClick={() => update(o, "OUT_FOR_DELIVERY")}>
+                  🛵 Mark out for delivery
+                </button>
+              </div>
+            )}
+            {o.status === "OUT_FOR_DELIVERY" && (
+              <div className="order-actions">
+                <button className="btn btn-success btn-lg" onClick={() => update(o, "DELIVERED")}>
+                  ✓ Mark delivered
+                </button>
+              </div>
+            )}
+          </OrderCard>
+        ))}
+      </div>
       {orders.data && <Pagination page={orders.data.page} pages={orders.data.pages} onChange={setPage} />}
     </>
   );
