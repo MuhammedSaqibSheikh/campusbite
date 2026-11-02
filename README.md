@@ -101,6 +101,14 @@ Edit `.env` and set at least:
 - `JWT_SECRET` – a long random string, e.g. `python -c "import secrets; print(secrets.token_urlsafe(48))"`
 - `OPENAI_API_KEY` – your OpenAI key (only needed for the AI insights page)
 
+No OpenAI key? Use the free, rate-limited [GitHub Models](https://docs.github.com/en/github-models) endpoint instead: create a fine-grained GitHub personal access token with the **Models: read** permission and set
+
+```env
+OPENAI_API_KEY=<your GitHub token>
+OPENAI_BASE_URL=https://models.github.ai/inference
+OPENAI_MODEL=openai/gpt-4o-mini
+```
+
 Then start everything:
 
 ```bash
@@ -147,7 +155,8 @@ Never commit real values. `.env` files are git-ignored; only `.env.example` file
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | backend | Token lifetime | `1440` |
 | `CORS_ORIGINS` | backend | Comma-separated allowed frontend origins | `http://localhost:5173` |
 | `OPENAI_API_KEY` | backend | OpenAI key; AI endpoints return `503` if empty | empty |
-| `OPENAI_MODEL` | backend | Chat model | `gpt-4o-mini` |
+| `OPENAI_MODEL` | backend | Chat model (`openai/gpt-4o-mini` for GitHub Models) | `gpt-4o-mini` |
+| `OPENAI_BASE_URL` | backend | Optional OpenAI-compatible endpoint, e.g. `https://models.github.ai/inference` | empty (OpenAI) |
 | `AI_RATE_LIMIT_PER_MINUTE` | backend | Max AI requests per customer per minute | `10` |
 | `REMINDER_THRESHOLD_MINUTES` | backend | Idle time before a reminder is created | `15` |
 | `REMINDER_INTERVAL_SECONDS` | backend | How often the background scan runs | `60` |

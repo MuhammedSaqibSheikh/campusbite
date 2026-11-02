@@ -105,7 +105,12 @@ def _ask(db: Session, user: User, question: str) -> AIOut:
     if count == 0:
         return AIOut(answer="You have not placed any orders yet, so there is nothing to summarise.", orders_considered=0)
 
-    client = openai.OpenAI(api_key=settings.openai_api_key, timeout=30, max_retries=1)
+    client = openai.OpenAI(
+        api_key=settings.openai_api_key,
+        base_url=settings.openai_base_url or None,
+        timeout=30,
+        max_retries=1,
+    )
     try:
         response = client.chat.completions.create(
             model=settings.openai_model,

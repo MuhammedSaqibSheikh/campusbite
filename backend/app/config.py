@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    # Optional OpenAI-compatible endpoint, e.g. GitHub Models: https://models.github.ai/inference
+    openai_base_url: str = ""
     ai_rate_limit_per_minute: int = 10
 
     reminder_threshold_minutes: int = 15
