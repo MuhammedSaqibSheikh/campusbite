@@ -133,6 +133,12 @@ def _ask(db: Session, user: User, question: str) -> AIOut:
         logger.error("OpenAI error: %s", exc)
         raise HTTPException(status_code=502, detail="The AI service returned an error. Please try again.")
 
+    if not getattr(response, "choices", None):
+        logger.error("Unexpected response from AI endpoint: %r", str(response)[:200])
+        raise HTTPException(
+            status_code=502,
+            detail="The AI service returned an unexpected response. Check OPENAI_BASE_URL and network/proxy settings.",
+        )
     answer = (response.choices[0].message.content or "").strip() or "I could not generate an answer."
     return AIOut(answer=answer, orders_considered=count)
 

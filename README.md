@@ -149,8 +149,8 @@ Never commit real values. `.env` files are git-ignored; only `.env.example` file
 
 | Variable | Used by | Description | Default |
 |---|---|---|---|
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | compose | Database credentials (compose builds `DATABASE_URL` from them) | required |
-| `DATABASE_URL` | backend | SQLAlchemy URL (set by compose in Docker) | `sqlite:///./campusbite.db` |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | compose | Database credentials (passed to the backend with `POSTGRES_HOST=db`; the backend builds an escaped connection URL, so special characters in the password are fine) | required |
+| `DATABASE_URL` | backend | SQLAlchemy URL used when `POSTGRES_HOST` is not set (local runs) | `sqlite:///./campusbite.db` |
 | `JWT_SECRET` | backend | Secret used to sign JWTs | **required** |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | backend | Token lifetime | `1440` |
 | `CORS_ORIGINS` | backend | Comma-separated allowed frontend origins | `http://localhost:5173` |
