@@ -1,11 +1,12 @@
 import { useState } from "react";
 import api, { errorMessage } from "../api/client";
 import Alert from "../components/Alert";
+import DishMediaManager from "../components/DishMediaManager";
 import PageHeader from "../components/PageHeader";
 import Pagination from "../components/Pagination";
 import Spinner from "../components/Spinner";
 import useFetch from "../hooks/useFetch";
-import { foodEmoji, money } from "../utils";
+import { foodEmoji, mediaUrl, money } from "../utils";
 
 const BLANK = { name: "", description: "", price: "", category: "", is_available: true };
 
@@ -16,6 +17,8 @@ export default function OwnerMenu() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [mediaFor, setMediaFor] = useState(null);
+  const mediaDish = menu.data?.items.find((d) => d.id === mediaFor);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
 
@@ -110,6 +113,7 @@ export default function OwnerMenu() {
       </form>
 
       {menu.loading && !menu.data && <Spinner />}
+      {mediaDish && <DishMediaManager dish={mediaDish} onChanged={menu.reload} onClose={() => setMediaFor(null)} />}
       <div className="card table-wrap">
         <table className="responsive-table">
           <thead>
@@ -128,7 +132,11 @@ export default function OwnerMenu() {
               <tr key={d.id}>
                 <td className="primary">
                   <div className="row top">
-                    <span className="thumb" aria-hidden="true">{foodEmoji(`${d.category} ${d.name}`)}</span>
+                    {d.image_url ? (
+                      <img className="thumb" src={mediaUrl(d.image_url)} alt="" loading="lazy" />
+                    ) : (
+                      <span className="thumb" aria-hidden="true">{foodEmoji(`${d.category} ${d.name}`)}</span>
+                    )}
                     <div>
                       <b>{d.name}</b>
                       <br />
@@ -145,6 +153,16 @@ export default function OwnerMenu() {
                   </button>
                 </td>
                 <td className="actions">
+                  <button
+                    className="btn btn-light btn-sm"
+                    aria-label={`Photos and videos for ${d.name}`}
+                    onClick={() => {
+                      setMediaFor(d.id);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    🖼️ {d.media?.length || 0}
+                  </button>
                   <button className="btn btn-light btn-sm" onClick={() => edit(d)}>Edit</button>
                   <button className="btn btn-danger btn-sm" onClick={() => remove(d)}>Delete</button>
                 </td>

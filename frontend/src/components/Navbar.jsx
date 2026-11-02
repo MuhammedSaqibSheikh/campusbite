@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
-import { initials, roleHome, roleName } from "../utils";
+import { roleHome, roleName } from "../utils";
+import Avatar from "./Avatar";
 
 const LINKS = {
   customer: [
@@ -73,18 +74,19 @@ export default function Navbar() {
                 Cart {count > 0 && <span className="pill" key={count}>{count}</span>}
               </NavLink>
             )}
+            {user && <NavLink to="/profile">Profile</NavLink>}
           </div>
 
           <div className="nav-user">
             {user ? (
               <>
-                <div className="row">
-                  <span className="avatar" aria-hidden="true">{initials(user.name)}</span>
+                <Link to="/profile" className="row nav-profile" title="My profile">
+                  <Avatar user={user} />
                   <span className="user-meta">
                     <b className="small">{user.name}</b>
                     <small>{roleName(user.role)}</small>
                   </span>
-                </div>
+                </Link>
                 <button
                   type="button"
                   className="btn btn-light btn-sm"

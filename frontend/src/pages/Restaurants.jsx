@@ -6,7 +6,7 @@ import Pagination from "../components/Pagination";
 import { SkeletonGrid } from "../components/Skeleton";
 import { useAuth } from "../context/AuthContext";
 import useFetch from "../hooks/useFetch";
-import { coverFor, foodEmoji } from "../utils";
+import { coverFor, foodEmoji, mediaUrl } from "../utils";
 
 export default function Restaurants() {
   const { user } = useAuth();
@@ -61,7 +61,11 @@ export default function Restaurants() {
           {data.items.map((r) => (
             <Link key={r.id} to={`/restaurants/${r.id}`} className="card restaurant-card hover-lift">
               <div className="cover" style={{ background: coverFor(r.name) }}>
-                <span aria-hidden="true">{foodEmoji(`${r.cuisine} ${r.name}`)}</span>
+                {r.image_url ? (
+                  <img className="cover-img" src={mediaUrl(r.image_url)} alt="" loading="lazy" />
+                ) : (
+                  <span aria-hidden="true">{foodEmoji(`${r.cuisine} ${r.name}`)}</span>
+                )}
               </div>
               <div className="card-body">
                 <h3>{r.name}</h3>

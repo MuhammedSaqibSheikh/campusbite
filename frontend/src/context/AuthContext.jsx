@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
   const register = async (payload) => startSession((await api.post("/auth/register", payload)).data);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout: clearSession }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout: clearSession, updateUser: saveUser }}>
       {children}
     </AuthContext.Provider>
   );

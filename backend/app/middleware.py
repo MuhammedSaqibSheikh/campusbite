@@ -4,6 +4,7 @@ import time
 import uuid
 
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from .config import get_settings
@@ -14,11 +15,17 @@ logger = logging.getLogger("campusbite")
 
 
 def register_middleware(app: FastAPI) -> None:
+    max_body = (get_settings().max_video_mb + 1) * 1024 * 1024
+
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         request_id = uuid.uuid4().hex[:8]
         start = time.perf_counter()
         logger.info("[%s] -> %s %s", request_id, request.method, request.url.path)
+        # Reject oversized uploads before the body is read.
+        length = request.headers.get("content-length")
+        if length and length.isdigit() and int(length) > max_body:
+            return JSONResponse(status_code=413, content={"detail": "Request body is too large"})
         try:
             response = await call_next(request)
         except Exception:

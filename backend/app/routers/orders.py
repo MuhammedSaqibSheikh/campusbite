@@ -15,6 +15,7 @@ from ..models import (
     Order,
     OrderItem,
     OrderStatus as S,
+    PaymentCard,
     PaymentLedger,
     PaymentStatus,
     Restaurant,
@@ -68,6 +69,12 @@ def place_order(payload: OrderCreate, db: Session = Depends(get_db), user: User 
     if unavailable:
         raise HTTPException(status_code=400, detail=f"Currently unavailable: {', '.join(unavailable)}")
 
+    card = None
+    if payload.payment_card_id is not None:
+        card = db.get(PaymentCard, payload.payment_card_id)
+        if card is None or card.user_id != user.id:
+            raise HTTPException(status_code=400, detail="Selected card not found")
+
     # Prices always come from the database, never from the client.
     total = sum((m.price * quantities[m.id] for m in menu), Decimal("0"))
     order = Order(
@@ -87,7 +94,7 @@ def place_order(payload: OrderCreate, db: Session = Depends(get_db), user: User 
             entry_type="PAYMENT",
             amount=total,
             status=PaymentStatus.MOCK_PAID,
-            reference=f"MOCK-PAY-{uuid.uuid4().hex[:10].upper()}",
+            reference=f"MOCK-PAY-{uuid.uuid4().hex[:10].upper()}" + (f"-{card.brand.upper()}-{card.last4}" if card else ""),
         )
     )
     db.commit()

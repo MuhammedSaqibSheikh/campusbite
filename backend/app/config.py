@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     seed_demo_data: bool = True
     allow_staff_registration: bool = True
 
+    # Uploaded avatars, restaurant covers and dish photos/videos are stored here and served at /media.
+    media_dir: str = "media"
+    max_image_mb: int = 5
+    max_video_mb: int = 50
+    max_media_per_dish: int = 8
+
     @property
     def sqlalchemy_url(self) -> Union[str, URL]:
         if self.postgres_host:

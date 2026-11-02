@@ -39,6 +39,12 @@ services:
       REMINDER_INTERVAL_SECONDS: ${REMINDER_INTERVAL_SECONDS:-60}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       ALLOW_STAFF_REGISTRATION: ${ALLOW_STAFF_REGISTRATION:-true}
+      MEDIA_DIR: /code/media
+      MAX_IMAGE_MB: ${MAX_IMAGE_MB:-5}
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-50}
+    volumes:
+      - media:/code/media
 
 volumes:
   pgdata:
+  media:

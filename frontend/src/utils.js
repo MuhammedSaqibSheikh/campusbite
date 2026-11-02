@@ -1,4 +1,9 @@
+import { API_BASE } from "./api/client";
+
 export const money = (n) => `₹${Number(n).toFixed(2)}`;
+
+// Uploaded files are returned as "/media/..." paths served by the backend.
+export const mediaUrl = (u) => (!u ? "" : /^https?:\/\//i.test(u) ? u : `${API_BASE}${u}`);
 
 // The API returns naive UTC timestamps; mark them as UTC before formatting.
 export const formatDate = (s) => {

@@ -16,6 +16,7 @@ import OwnerOrders from "./pages/OwnerOrders";
 import OwnerMenu from "./pages/OwnerMenu";
 import OwnerReturns from "./pages/OwnerReturns";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
+import Profile from "./pages/Profile";
 
 function Home() {
   const { user } = useAuth();
@@ -36,6 +37,10 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/restaurants" element={<Restaurants />} />
             <Route path="/restaurants/:id" element={<RestaurantMenu />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<Profile />} />
+            </Route>
 
             <Route element={<ProtectedRoute roles={["customer"]} />}>
               <Route path="/cart" element={<Cart />} />

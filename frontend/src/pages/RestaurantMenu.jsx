@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Alert from "../components/Alert";
 import EmptyState from "../components/EmptyState";
+import MediaViewer from "../components/MediaViewer";
 import Pagination from "../components/Pagination";
 import { SkeletonGrid } from "../components/Skeleton";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import useFetch from "../hooks/useFetch";
-import { coverFor, foodEmoji, money } from "../utils";
+import { coverFor, foodEmoji, mediaUrl, money } from "../utils";
 
 export default function RestaurantMenu() {
   const { id } = useParams();
@@ -18,9 +19,17 @@ export default function RestaurantMenu() {
   const [applied, setApplied] = useState(filters);
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState("");
+  const [viewing, setViewing] = useState(null);
 
   const restaurant = useFetch(`/restaurants/${id}`);
   const menu = useFetch(`/restaurants/${id}/menu`, { ...applied, page, page_size: 12 });
+  const showFab = user?.role === "customer" && count > 0;
+
+  // Leaves room below the footer so the floating cart button never covers it.
+  useEffect(() => {
+    document.body.classList.toggle("has-fab", showFab);
+    return () => document.body.classList.remove("has-fab");
+  }, [showFab]);
 
   const add = (dish) => {
     if (!addItem(restaurant.data, dish)) {
@@ -54,13 +63,22 @@ export default function RestaurantMenu() {
       <p className="small">
         <Link to="/restaurants">← All restaurants</Link>
       </p>
-      <section className="menu-hero" style={{ background: coverFor(r.name) }}>
+      <section
+        className={r.image_url ? "menu-hero has-image" : "menu-hero"}
+        style={{
+          background: r.image_url
+            ? `linear-gradient(90deg, rgba(17,24,39,0.78), rgba(17,24,39,0.25)), url("${mediaUrl(r.image_url)}") center / cover no-repeat`
+            : coverFor(r.name),
+        }}
+      >
         <span className="cover-emoji" aria-hidden="true">{foodEmoji(`${r.cuisine} ${r.name}`)}</span>
         <div>
           <h1>{r.name}</h1>
           <p>{r.description}</p>
           <div className="row wrap" style={{ marginTop: "0.6rem" }}>
             {r.cuisine && <span className="tag">{r.cuisine}</span>}
+            {r.opening_hours && <span className="tag">🕒 {r.opening_hours}</span>}
+            {r.phone && <span className="tag">📞 {r.phone}</span>}
             <span className="rating">{r.avg_rating ? `★ ${r.avg_rating} (${r.review_count} reviews)` : "No reviews yet"}</span>
           </div>
         </div>
@@ -89,11 +107,32 @@ export default function RestaurantMenu() {
 
       {menu.data && (
         <div className="grid stagger" key={`${JSON.stringify(applied)}-${page}`}>
-          {menu.data.items.map((d) => (
+          {menu.data.items.map((d) => {
+            const media = d.media || [];
+            const videos = media.filter((m) => m.kind === "video").length;
+            return (
             <div key={d.id} className={d.is_available ? "card dish hover-lift" : "card dish unavailable"}>
+              {media.length > 0 || d.image_url ? (
+                <button type="button" className="dish-media" aria-label={`View photos and videos of ${d.name}`} onClick={() => setViewing({ dish: d, start: 0 })}>
+                  {d.image_url ? (
+                    <img src={mediaUrl(d.image_url)} alt={d.name} loading="lazy" />
+                  ) : (
+                    <span className="dish-placeholder" style={{ background: coverFor(d.name) }} aria-hidden="true">
+                      {foodEmoji(`${d.category} ${d.name}`)}
+                    </span>
+                  )}
+                  {media.length > 1 && <span className="media-count">🖼️ {media.length}</span>}
+                  {videos > 0 && <span className="play-badge" aria-hidden="true">▶</span>}
+                </button>
+              ) : (
+                <div className="dish-media" aria-hidden="true">
+                  <span className="dish-placeholder" style={{ background: coverFor(d.name) }}>
+                    {foodEmoji(`${d.category} ${d.name}`)}
+                  </span>
+                </div>
+              )}
               <div className="dish-head">
                 <div className="row top">
-                  <span className="thumb" aria-hidden="true">{foodEmoji(`${d.category} ${d.name}`)}</span>
                   <div>
                     <h3>{d.name}</h3>
                     {d.category && <span className="tag">{d.category}</span>}
@@ -116,18 +155,25 @@ export default function RestaurantMenu() {
                 ) : null}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {menu.data && <Pagination page={menu.data.page} pages={menu.data.pages} onChange={setPage} />}
 
+      {viewing && (
+        <MediaViewer
+          items={viewing.dish.media?.length ? viewing.dish.media : [{ id: 0, kind: "image", url: viewing.dish.image_url }]}
+          start={viewing.start}
+          title={viewing.dish.name}
+          onClose={() => setViewing(null)}
+        />
+      )}
+
       {isCustomer && count > 0 && (
-        <>
-          <div className="fab-spacer" aria-hidden="true" />
-          <Link to="/cart" className="cart-fab">
-            🛒 View cart <span className="pill" key={count}>{count}</span> · {money(total)}
-          </Link>
-        </>
+        <Link to="/cart" className="cart-fab">
+          🛒 View cart <span className="pill" key={count}>{count}</span> · {money(total)}
+        </Link>
       )}
     </>
   );

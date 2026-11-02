@@ -21,9 +21,11 @@ CampusBite is a full-stack food ordering and delivery app with three user roles:
 - Order history with filters (status, date), live status tracker, cancel while `PLACED`
 - Rate and review delivered orders; request a return/refund (one per order, reason required)
 - **AI order insights**: summary of recent orders and free-form questions about your own history
+- View dish photo/video galleries; pay with a saved dummy card at checkout
 
 **Restaurant owner**
 - Add / edit / delete dishes and toggle availability
+- Upload **photos and videos for each dish** (first photo becomes the thumbnail) and a restaurant cover photo; set phone and opening hours
 - Incoming orders with status and date filters; accept, prepare, mark ready, assign a delivery partner
 - Approve or reject return/refund requests (approval refunds the payment and moves the order to `REFUNDED`)
 - Statistics (orders, revenue, rating, top dishes) and **reminders** for orders idle in `PLACED`/`ACCEPTED` for more than 15 minutes
@@ -31,6 +33,16 @@ CampusBite is a full-stack food ordering and delivery app with three user roles:
 **Delivery partner**
 - See only orders assigned to them with customer delivery details
 - Move orders `ASSIGNED → OUT_FOR_DELIVERY → DELIVERED`; view delivery history
+- Vehicle type and number on their profile; dummy payout cards
+
+**Every user: Profile tab**
+- Profile picture, name, phone, date of birth (validated; delivery partners must be 18+), short bio, address (customers)
+- Dummy payment cards: Luhn-validated, brand detection and live card preview; only brand, last 4 digits and expiry are stored
+- Change password
+
+**Uploads**
+- File type is detected from the file's content (not its name or browser-supplied type); SVG and other types are rejected
+- Size limits (5 MB images, 50 MB videos by default), random file names, files removed when replaced or deleted
 
 **Platform**
 - JWT auth, bcrypt password hashing, role-based access control enforced on the **backend** and mirrored by protected routes on the frontend
@@ -168,14 +180,16 @@ Never commit real values. `.env` files are git-ignored; only `.env.example` file
 | `REMINDER_THRESHOLD_MINUTES` | backend | Idle time before a reminder is created | `15` |
 | `REMINDER_INTERVAL_SECONDS` | backend | How often the background scan runs | `60` |
 | `SEED_DEMO_DATA` | backend | Insert demo users/restaurants on first start | `true` |
+| `MEDIA_DIR` | backend | Folder for uploaded avatars, covers and dish media (served at `/media`) | `media` (`/code/media` volume in Docker) |
+| `MAX_IMAGE_MB`, `MAX_VIDEO_MB` | backend | Upload size limits | `5`, `50` |
 | `ALLOW_STAFF_REGISTRATION` | backend | Allow self-registration as owner / delivery partner. Set `false` in production | `true` |
 | `VITE_API_URL` | frontend | Backend base URL | `http://localhost:8000` |
 
 ## Database setup
 
-No manual setup is needed. On startup the backend creates all tables with `Base.metadata.create_all` and, when `SEED_DEMO_DATA=true` and the database is empty, inserts demo data. With Docker Compose the PostgreSQL data persists in the `pgdata` volume.
+No manual setup is needed. On startup the backend creates all tables and adds any new nullable columns to existing tables (a small built-in upgrade step in `app/migrations.py`, so databases from older versions keep their data). When `SEED_DEMO_DATA=true` and the database is empty, it inserts demo data. With Docker Compose the PostgreSQL data persists in the `pgdata` volume and uploaded photos/videos in the `media` volume.
 
-Tables: `users`, `restaurants`, `menu_items`, `orders`, `order_items`, `reviews`, `return_requests`, `payment_ledger`, `reminder_logs`.
+Tables: `users`, `restaurants`, `menu_items`, `menu_item_media`, `orders`, `order_items`, `reviews`, `return_requests`, `payment_ledger`, `payment_cards`, `reminder_logs`.
 
 Relationships: a customer has many orders; a restaurant has many menu items and orders; an order has many order items and many ledger entries, and at most one review and one return request (both unique per order); a delivery partner can be assigned to many orders. Order items snapshot the dish name and price so history is unaffected by later menu edits.
 
@@ -212,6 +226,10 @@ List endpoints return `{ items, total, page, page_size, pages }` and accept `pag
 | `POST /auth/register` | public | Register (customer, owner with `restaurant_name`, or delivery partner) |
 | `POST /auth/login` | public | Returns `access_token` and user |
 | `GET /auth/me` | any | Current user |
+| `GET /profile`, `PUT /profile` | any | Profile: name, phone, address, date of birth, bio; vehicle type/number for delivery partners |
+| `POST /profile/avatar`, `DELETE /profile/avatar` | any | Upload (multipart `file`) / remove profile picture |
+| `POST /profile/password` | any | Change password (`current_password`, `new_password`) |
+| `GET/POST /profile/cards`, `DELETE /profile/cards/{id}`, `POST /profile/cards/{id}/default` | any | Dummy saved cards. Number is Luhn-checked; only brand, last 4 and expiry are stored (never the full number or CVV) |
 | `GET /restaurants` | public | List; `search`, `cuisine` |
 | `GET /restaurants/{id}` | public | Restaurant with average rating |
 | `GET /restaurants/{id}/menu` | public | Menu; `search`, `min_price`, `max_price`, `category` |
@@ -222,8 +240,10 @@ List endpoints return `{ items, total, page, page_size, pages }` and accept `pag
 | `POST /orders/{id}/cancel` | customer | Cancel while `PLACED` |
 | `POST /orders/{id}/review` | customer | Rate a delivered order (once) |
 | `POST /orders/{id}/return` | customer | Request return/refund with `reason` (once) |
-| `GET /owner/restaurant`, `PUT /owner/restaurant` | owner | View / update restaurant |
+| `GET /owner/restaurant`, `PUT /owner/restaurant` | owner | View / update restaurant (incl. phone, opening hours) |
+| `POST /owner/restaurant/image`, `DELETE /owner/restaurant/image` | owner | Upload / remove the restaurant cover photo |
 | `GET/POST /owner/menu`, `PUT/DELETE /owner/menu/{id}` | owner | Manage dishes |
+| `POST /owner/menu/{id}/media`, `DELETE /owner/menu/{id}/media/{media_id}` | owner | Add / remove dish photos (JPG, PNG, WEBP, GIF) and videos (MP4, WEBM, MOV) |
 | `PATCH /owner/menu/{id}/availability` | owner | Mark available/unavailable |
 | `GET /owner/orders` | owner | Restaurant orders; `status`, `date_from`, `date_to` |
 | `PATCH /owner/orders/{id}/status` | owner | `ACCEPTED`, `PREPARING`, `READY` |

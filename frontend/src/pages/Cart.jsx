@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api, { errorMessage } from "../api/client";
 import Alert from "../components/Alert";
@@ -6,6 +6,7 @@ import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import useFetch from "../hooks/useFetch";
 import { foodEmoji, money } from "../utils";
 
 export default function Cart() {
@@ -15,6 +16,13 @@ export default function Cart() {
   const [address, setAddress] = useState(user?.address || "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const cards = useFetch("/profile/cards", {}, cart.items.length > 0);
+  const [cardId, setCardId] = useState("");
+
+  useEffect(() => {
+    const preferred = cards.data?.find((c) => c.is_default) || cards.data?.[0];
+    if (preferred) setCardId(String(preferred.id));
+  }, [cards.data]);
 
   if (cart.items.length === 0) {
     return (
@@ -41,6 +49,7 @@ export default function Cart() {
         restaurant_id: cart.restaurantId,
         delivery_address: address,
         items: cart.items.map((i) => ({ menu_item_id: i.id, quantity: i.quantity })),
+        payment_card_id: cardId ? Number(cardId) : null,
       });
       clear();
       navigate("/orders");
@@ -111,6 +120,21 @@ export default function Cart() {
           <label>
             Delivery address
             <textarea required minLength={5} rows={2} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Hostel block, room number..." />
+          </label>
+          <label>
+            Pay with
+            <select value={cardId} onChange={(e) => setCardId(e.target.value)}>
+              {cards.data?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  💳 {c.brand.toUpperCase()} •••• {c.last4}
+                  {c.is_default ? " (default)" : ""}
+                </option>
+              ))}
+              <option value="">Demo payment (no card)</option>
+            </select>
+            <span className="hint">
+              <Link to="/profile">Manage saved cards</Link>
+            </span>
           </label>
           <p className="muted small">💳 Payment is simulated: your order is marked as paid (mock_paid) when placed.</p>
           <button className="btn btn-lg btn-block" disabled={busy}>

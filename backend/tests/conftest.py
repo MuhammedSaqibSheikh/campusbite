@@ -7,6 +7,7 @@ os.environ["JWT_SECRET"] = "test-secret"
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["SEED_DEMO_DATA"] = "true"
 os.environ["REMINDER_INTERVAL_SECONDS"] = "3600"
+os.environ["MEDIA_DIR"] = os.path.join(os.path.dirname(_db_file), "media")
 
 import pytest
 from fastapi.testclient import TestClient

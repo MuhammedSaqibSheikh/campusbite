@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -50,9 +50,18 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(30), index=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30))
     address: Mapped[Optional[str]] = mapped_column(String(255))
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500))
+    date_of_birth: Mapped[Optional[date]] = mapped_column(Date)
+    bio: Mapped[Optional[str]] = mapped_column(String(300))
+    # Delivery partners only
+    vehicle_type: Mapped[Optional[str]] = mapped_column(String(30))
+    vehicle_number: Mapped[Optional[str]] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     restaurant: Mapped[Optional["Restaurant"]] = relationship(back_populates="owner", uselist=False)
+    cards: Mapped[list["PaymentCard"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", order_by="PaymentCard.id"
+    )
 
 
 class Restaurant(Base):
@@ -65,6 +74,8 @@ class Restaurant(Base):
     cuisine: Mapped[Optional[str]] = mapped_column(String(80), index=True)
     address: Mapped[Optional[str]] = mapped_column(String(255))
     image_url: Mapped[Optional[str]] = mapped_column(String(500))
+    phone: Mapped[Optional[str]] = mapped_column(String(30))
+    opening_hours: Mapped[Optional[str]] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
@@ -86,6 +97,41 @@ class MenuItem(Base):
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
 
     restaurant: Mapped[Restaurant] = relationship(back_populates="menu_items")
+    media: Mapped[list["MenuItemMedia"]] = relationship(
+        back_populates="menu_item", cascade="all, delete-orphan", order_by="MenuItemMedia.id", lazy="selectin"
+    )
+
+
+class MenuItemMedia(Base):
+    """A photo or video of a dish, uploaded by the restaurant owner."""
+
+    __tablename__ = "menu_item_media"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    menu_item_id: Mapped[int] = mapped_column(ForeignKey("menu_items.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # image or video
+    url: Mapped[str] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    menu_item: Mapped[MenuItem] = relationship(back_populates="media")
+
+
+class PaymentCard(Base):
+    """Dummy saved card. The full number and CVV are never stored, only brand, last 4 digits and expiry."""
+
+    __tablename__ = "payment_cards"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    cardholder_name: Mapped[str] = mapped_column(String(100))
+    brand: Mapped[str] = mapped_column(String(20))
+    last4: Mapped[str] = mapped_column(String(4))
+    exp_month: Mapped[int] = mapped_column(Integer)
+    exp_year: Mapped[int] = mapped_column(Integer)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="cards")
 
 
 class Order(Base):

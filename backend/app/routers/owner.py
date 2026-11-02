@@ -1,14 +1,17 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from ..config import get_settings
 from ..database import get_db
 from ..deps import PageParams, get_owner_restaurant, paginate
+from ..media import delete_media_file, save_upload
 from ..models import (
     MenuItem,
+    MenuItemMedia,
     Order,
     OrderItem,
     OrderStatus as S,
@@ -23,6 +26,7 @@ from ..models import (
 from ..schemas import (
     AssignIn,
     AvailabilityIn,
+    MediaOut,
     MenuItemIn,
     MenuItemOut,
     MenuItemUpdate,
@@ -79,6 +83,27 @@ def update_restaurant(
     return attach_ratings(db, [restaurant])[0]
 
 
+@router.post("/restaurant/image", response_model=RestaurantOut)
+def upload_restaurant_image(
+    file: UploadFile = File(...), restaurant: Restaurant = Depends(get_owner_restaurant), db: Session = Depends(get_db)
+):
+    url, _ = save_upload(file, "restaurants")
+    old = restaurant.image_url
+    restaurant.image_url = url
+    db.commit()
+    delete_media_file(old)
+    return attach_ratings(db, [restaurant])[0]
+
+
+@router.delete("/restaurant/image", response_model=RestaurantOut)
+def remove_restaurant_image(restaurant: Restaurant = Depends(get_owner_restaurant), db: Session = Depends(get_db)):
+    old = restaurant.image_url
+    restaurant.image_url = None
+    db.commit()
+    delete_media_file(old)
+    return attach_ratings(db, [restaurant])[0]
+
+
 # ---------- menu ----------
 @router.get("/menu", response_model=Page[MenuItemOut])
 def list_menu(
@@ -131,8 +156,52 @@ def set_availability(
 
 @router.delete("/menu/{item_id}", status_code=204)
 def delete_menu_item(item_id: int, restaurant: Restaurant = Depends(get_owner_restaurant), db: Session = Depends(get_db)):
-    db.delete(_menu_item(db, item_id, restaurant))
+    item = _menu_item(db, item_id, restaurant)
+    files = [m.url for m in item.media] + [item.image_url]
+    db.delete(item)
     db.commit()
+    for url in set(files):
+        delete_media_file(url)
+
+
+# ---------- dish photos & videos ----------
+@router.post("/menu/{item_id}/media", response_model=MediaOut, status_code=201)
+def add_menu_media(
+    item_id: int,
+    file: UploadFile = File(...),
+    restaurant: Restaurant = Depends(get_owner_restaurant),
+    db: Session = Depends(get_db),
+):
+    item = _menu_item(db, item_id, restaurant)
+    limit = get_settings().max_media_per_dish
+    if len(item.media) >= limit:
+        raise HTTPException(status_code=409, detail=f"A dish can have at most {limit} photos/videos")
+    url, kind = save_upload(file, "dishes", allow_video=True)
+    media = MenuItemMedia(menu_item_id=item.id, kind=kind, url=url)
+    db.add(media)
+    # The first photo becomes the dish thumbnail.
+    if kind == "image" and not item.image_url:
+        item.image_url = url
+    db.commit()
+    return media
+
+
+@router.delete("/menu/{item_id}/media/{media_id}", status_code=204)
+def delete_menu_media(
+    item_id: int,
+    media_id: int,
+    restaurant: Restaurant = Depends(get_owner_restaurant),
+    db: Session = Depends(get_db),
+):
+    item = _menu_item(db, item_id, restaurant)
+    media = next((m for m in item.media if m.id == media_id), None)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media not found")
+    item.media.remove(media)
+    if item.image_url == media.url:
+        item.image_url = next((m.url for m in item.media if m.kind == "image"), None)
+    db.commit()
+    delete_media_file(media.url)
 
 
 # ---------- orders ----------
